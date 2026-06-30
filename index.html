@@ -101,6 +101,28 @@
   .chart-wrap  { background:var(--surface-alt); border:1px solid var(--border); border-radius:var(--radius); padding:14px 16px; }
   .chart-title { font-size:11px; font-weight:600; color:var(--text-secondary); text-transform:uppercase; letter-spacing:.06em; margin-bottom:10px; }
   .chart-note  { font-size:11px; color:var(--text-muted); display:flex; gap:16px; flex-wrap:wrap; }
+  .print-header { display:none; }
+
+  @media print {
+    body { background:#fff; font-size:11px; }
+    .app { display:block; }
+    .sidebar, .no-print, .settings-bar { display:none !important; }
+    .main { padding:0; }
+    .print-header { display:flex; align-items:center; gap:14px; padding-bottom:14px; margin-bottom:14px; border-bottom:2px solid #0d1117; }
+    .print-header img { height:32px; }
+    .print-header-meta { font-size:12px; color:#444c56; display:flex; flex-direction:column; }
+    .print-header-meta strong { font-size:15px; color:#0d1117; }
+    .profile-card, .cat-card, .chart-wrap, .tab-card { border:1px solid #ccc !important; box-shadow:none !important; }
+    .tabs { display:none !important; }
+    .tc { display:block !important; }
+    .tc.active { display:block !important; }
+    table { font-size:10px; }
+    .chart-grid { grid-template-columns:1fr 1fr; page-break-inside:avoid; }
+    .chart-wrap { page-break-inside:avoid; }
+    .test-section, .results-body > div { page-break-inside:avoid; }
+    a { color:inherit; text-decoration:none; }
+  }
+
   @media(max-width:900px){
     .app{grid-template-columns:1fr} .sidebar{position:static;height:auto}
     .cat-grid{grid-template-columns:repeat(2,1fr)} .chart-grid{grid-template-columns:1fr}
@@ -110,7 +132,11 @@
 <body>
 <div class="app">
   <aside class="sidebar">
-    <div class="sb-brand"><h1>Performance Dashboard</h1><p>Individual Coaching</p></div>
+    <div class="sb-brand">
+      <img src="assets/logo.png" alt="FOOTBALLFIT" style="height:24px;margin-bottom:8px;display:block">
+      <h1>Performance Dashboard</h1>
+      <p>Individual Coaching</p>
+    </div>
     <div class="sb-search"><input id="sq" type="text" placeholder="Search athlete…" oninput="filterAthletes(this.value)"></div>
     <div class="alist" id="alist"><div style="padding:16px;font-size:12px;color:#7a8290;text-align:center">Connect Google Sheet to load athletes</div></div>
     <div class="settings-bar"><span id="sheetStatus">No sheet connected</span><button class="btn-sm" onclick="showConfig()">⚙ Settings</button></div>
@@ -132,10 +158,16 @@
 const NORMS = {
   // ── Jump / Power ──────────────────────────────────────────────────────────
   broad_jump:    { min:220,  max:260,  u:'cm',        lb:false, label:'Broad jump',              cat:'jump' },
-  slbj_L:        { min:100,  max:130,  u:'cm',        lb:false, label:'SL broad jump — L',       cat:'jump' },
-  slbj_R:        { min:100,  max:130,  u:'cm',        lb:false, label:'SL broad jump — R',       cat:'jump' },
-  slbj_LSI:      { min:90,   max:100,  u:'%',         lb:false, label:'SL broad jump LSI',       cat:'jump' },
-  triple_hop:    { min:600,  max:700,  u:'cm',        lb:false, label:'Triple hop',              cat:'jump' },
+  // No validated professional football-specific normative dataset exists for SL broad jump absolute distance.
+  // Tracked for individual longitudinal comparison only — no min/max scoring applied.
+  slbj_L:        { min:null, max:null, u:'cm',        lb:false, label:'SL broad jump — L',       cat:'jump', noNorm:true },
+  slbj_R:        { min:null, max:null, u:'cm',        lb:false, label:'SL broad jump — R',       cat:'jump', noNorm:true },
+  // LSI: healthy footballers show natural variance of 97-106% (scoping review, 27 studies, JOSPT 2024).
+  // <90% is a distinct injury-risk threshold (not a benchmark tier) — flagged separately in the UI.
+  slbj_LSI:      { min:97,   max:106,  u:'%',         lb:false, label:'SL broad jump LSI',       cat:'jump', injuryFloor:90 },
+  // Triple hop (single-leg): collegiate male soccer/basketball average 632±72cm (Myers et al. 2014).
+  // No professional-specific dataset found — moderate confidence, not pro-validated.
+  triple_hop:    { min:560,  max:704,  u:'cm',        lb:false, label:'Triple hop (SL)',         cat:'jump', note:'Collegiate data, not pro-specific' },
   cmj:           { min:35,   max:55,   u:'cm',        lb:false, label:'CMJ height',              cat:'jump' },
   sj:            { min:30,   max:50,   u:'cm',        lb:false, label:'Squat jump (SJ)',         cat:'jump' },
   eur:           { min:0.90, max:1.15, u:'EUR',       lb:false, label:'EUR (CMJ÷SJ)',            cat:'jump',  note:'Auto: CMJ÷SJ' },
@@ -160,7 +192,9 @@ const NORMS = {
   // ── Speed ─────────────────────────────────────────────────────────────────
   sprint10:      { min:1.65, max:1.80, u:'s',         lb:true,  label:'10m sprint',             cat:'speed' },
   sprint20:      { min:2.85, max:3.05, u:'s',         lb:true,  label:'20m sprint',             cat:'speed' },
-  max_vel:       { min:9.8,  max:11.5, u:'m/s',       lb:false, label:'Max velocity (20m fly)', cat:'speed' },
+  // Match-derived peak speed: pro average ~31-32 km/h (8.6-8.9 m/s); EPL all-time fastest ~37.4 km/h (10.4 m/s, Van de Ven).
+  // 8.3-9.5 m/s covers typical professional range; >9.5 m/s is genuinely elite outlier territory.
+  max_vel:       { min:8.3,  max:9.5,  u:'m/s',       lb:false, label:'Max velocity (20m fly)', cat:'speed' },
 };
 
 const CAT_LABELS = { jump:'Jump / Power', aero:'Aerobic', strength:'Strength', speed:'Speed' };
@@ -233,7 +267,7 @@ function deriveSession(row, bw_kg) {
 
 // ─── BENCHMARK SCORING ───────────────────────────────────────────────────────
 function bs(v, nk) {
-  const n = NORMS[nk]; if (!n || v==null) return null;
+  const n = NORMS[nk]; if (!n || v==null || n.noNorm) return null;
   if (n.lb) {
     if (v<=n.min) return 4; if (v<=n.max) return 3;
     if (v<=n.min*1.10) return 2; if (v<=n.min*1.20) return 1; return 0;
@@ -241,6 +275,11 @@ function bs(v, nk) {
     if (v>=n.max) return 4; if (v>=n.min) return 3;
     if (v>=n.min*0.90) return 2; if (v>=n.min*0.80) return 1; return 0;
   }
+}
+function injuryFlag(v, nk) {
+  const n = NORMS[nk];
+  if (!n || !n.injuryFloor || v==null) return null;
+  return v < n.injuryFloor;
 }
 function pill(s) {
   if (s===null) return '';
@@ -277,16 +316,23 @@ function sidebarCol(d) {
 // ─── TABLE ROW BUILDERS ───────────────────────────────────────────────────────
 function mRow(nk, val, prevVal, subtext, isAuto) {
   const n = NORMS[nk]; if (!n) return '';
-  const normText = `${n.min}–${n.max} ${n.u}`;
-  if (val==null) return `<tr><td class="lbl">${n.label}${n.note?` <span style="font-size:10px;color:var(--text-muted)">(${n.note})</span>`:''}</td><td colspan="2" class="miss">— not tested</td><td style="font-size:11px;color:var(--text-muted)">${normText}</td><td class="miss">—</td></tr>`;
+  const normText = n.noNorm ? 'No validated norm' : `${n.min}–${n.max} ${n.u}`;
+  const normStyle = n.noNorm ? 'font-style:italic;color:var(--text-muted)' : 'color:var(--text-muted)';
+  if (val==null) return `<tr><td class="lbl">${n.label}${n.note?` <span style="font-size:10px;color:var(--text-muted)">(${n.note})</span>`:''}</td><td colspan="2" class="miss">— not tested</td><td style="font-size:11px;${normStyle}">${normText}</td><td class="miss">—</td></tr>`;
   const s = bs(val, nk);
   const sub = subtext ? `<span class="rsub">${subtext}</span>` : '';
   const badge = isAuto ? '<span class="calc-badge">auto</span>' : '';
+  const flagged = injuryFlag(val, nk);
+  const statusCell = n.noNorm
+    ? `<span style="font-size:11px;color:var(--text-muted);font-style:italic">Track individually</span>`
+    : flagged
+      ? `<span class="pill p0" style="background:#fef2f2"><span class="pill-dot" style="background:#dc2626"></span>Injury risk flag (&lt;${n.injuryFloor}%)</span>`
+      : pill(s);
   return `<tr>
     <td class="lbl">${n.label}</td>
     <td><span class="rval">${val}</span><span class="runit">${n.u}</span>${sub}${badge}</td>
-    <td>${pill(s)}</td>
-    <td style="font-size:11px;color:var(--text-muted)">${normText}</td>
+    <td>${statusCell}</td>
+    <td style="font-size:11px;${normStyle}">${normText}</td>
     <td>${dHtml(val, prevVal, n.lb)}</td>
   </tr>`;
 }
@@ -420,6 +466,13 @@ function renderMain(){
   const speedKeys    = ['sprint10','sprint20','max_vel'];
 
   document.getElementById('main').innerHTML=`
+    <div class="print-header">
+      <img src="assets/logo.png" alt="FOOTBALLFIT">
+      <div class="print-header-meta">
+        <strong>${a.name}</strong> — Performance Report
+        <span>${a.position||'—'} · Generated ${new Date().toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'})}</span>
+      </div>
+    </div>
     <div class="profile-card">
       <div class="pav">${ini}</div>
       <div class="pinfo">
@@ -427,6 +480,7 @@ function renderMain(){
         <p class="pmeta">${a.position||'—'} · ${a.age||'—'} yrs · ${a.height_cm||'—'} cm · ${a.weight_kg||'—'} kg · Last tested ${d.test_date||'—'}</p>
         <div class="ptags"><span class="ptag">Remote coaching</span><span class="ptag">Professional football / futsal</span><span class="ptag">${a.sessions.length} session${a.sessions.length!==1?'s':''}</span>${inj}</div>
       </div>
+      <button class="btn-sm no-print" style="margin-left:auto;align-self:flex-start" onclick="window.print()">⬇ Save as PDF</button>
     </div>
     <div>
       <div class="sec-heading">Performance category status</div>
@@ -485,11 +539,17 @@ function renderMain(){
           </div>
 
           <div>
-            <div class="sec-heading">Strength</div>
+            <div class="sec-heading">Strength — Lifts (×BW)</div>
             <table><thead><tr><th>Test</th><th>Result</th><th>Test result status</th><th>Normative range</th><th>vs previous</th></tr></thead><tbody>
               ${strengthRow('sq_1rm_bw',d,pv,'Back squat')}
               ${strengthRow('tb_1rm_bw',d,pv,'Trap bar DL')}
               ${strengthRow('bp_1rm_bw',d,pv,'Bench press')}
+            </tbody></table>
+          </div>
+
+          <div>
+            <div class="sec-heading">Strength — Force Plate</div>
+            <table><thead><tr><th>Test</th><th>Result</th><th>Test result status</th><th>Normative range</th><th>vs previous</th></tr></thead><tbody>
               ${d.imtp!=null
                 ? mRow('imtp', d.imtp, pv?.imtp, `(${d.imtp_raw_N}N)`, true)
                 : `<tr><td class="lbl">IMTP <span style="font-size:10px;color:var(--text-muted)">(force plate)</span></td><td colspan="2" class="miss">— add imtp_N to unlock</td><td style="font-size:11px;color:var(--text-muted)">${NORMS.imtp.min}–${NORMS.imtp.max} ${NORMS.imtp.u}</td><td class="miss">—</td></tr>`}
