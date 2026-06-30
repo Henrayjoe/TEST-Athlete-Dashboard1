@@ -277,7 +277,8 @@ function sidebarCol(d) {
 // ─── TABLE ROW BUILDERS ───────────────────────────────────────────────────────
 function mRow(nk, val, prevVal, subtext, isAuto) {
   const n = NORMS[nk]; if (!n) return '';
-  if (val==null) return `<tr><td class="lbl">${n.label}${n.note?` <span style="font-size:10px;color:var(--text-muted)">(${n.note})</span>`:''}</td><td colspan="3" class="miss">— not tested</td></tr>`;
+  const normText = `${n.min}–${n.max} ${n.u}`;
+  if (val==null) return `<tr><td class="lbl">${n.label}${n.note?` <span style="font-size:10px;color:var(--text-muted)">(${n.note})</span>`:''}</td><td colspan="2" class="miss">— not tested</td><td style="font-size:11px;color:var(--text-muted)">${normText}</td><td class="miss">—</td></tr>`;
   const s = bs(val, nk);
   const sub = subtext ? `<span class="rsub">${subtext}</span>` : '';
   const badge = isAuto ? '<span class="calc-badge">auto</span>' : '';
@@ -285,21 +286,24 @@ function mRow(nk, val, prevVal, subtext, isAuto) {
     <td class="lbl">${n.label}</td>
     <td><span class="rval">${val}</span><span class="runit">${n.u}</span>${sub}${badge}</td>
     <td>${pill(s)}</td>
+    <td style="font-size:11px;color:var(--text-muted)">${normText}</td>
     <td>${dHtml(val, prevVal, n.lb)}</td>
   </tr>`;
 }
 function strengthRow(nk, d, pv, label) {
   const n = NORMS[nk];
+  const normText = `${n.min}–${n.max} ${n.u}`;
   const val  = d[nk], prev = pv?pv[nk]:null;
   const pfx  = nk.replace('_1rm_bw','');
   const kg   = d[pfx+'_kg_raw'], reps = d[pfx+'_reps_raw'], rm1 = d[pfx+'_1rm'];
-  if (val==null) return `<tr><td class="lbl">${label}</td><td colspan="3" class="miss">— not tested</td></tr>`;
+  if (val==null) return `<tr><td class="lbl">${label}</td><td colspan="2" class="miss">— not tested</td><td style="font-size:11px;color:var(--text-muted)">${normText}</td><td class="miss">—</td></tr>`;
   const s = bs(val, nk);
   let sub = reps&&reps>1 ? `<span class="rsub">(${kg}kg × ${reps} → est. 1RM ${rm1}kg)</span>` : rm1?`<span class="rsub">(1RM ${rm1}kg)</span>`:'';
   return `<tr>
     <td class="lbl">${label}</td>
     <td><span class="rval">${val}</span><span class="runit">×BW</span>${sub}<span class="calc-badge">auto</span></td>
     <td>${pill(s)}</td>
+    <td style="font-size:11px;color:var(--text-muted)">${normText}</td>
     <td>${dHtml(val, prev, false)}</td>
   </tr>`;
 }
@@ -440,7 +444,7 @@ function renderMain(){
 
           <div>
             <div class="sec-heading">Jump / Power</div>
-            <table><thead><tr><th>Test</th><th>Result</th><th>Test result status</th><th>vs previous</th></tr></thead><tbody>
+            <table><thead><tr><th>Test</th><th>Result</th><th>Test result status</th><th>Normative range</th><th>vs previous</th></tr></thead><tbody>
               ${mRow('broad_jump',  d.broad_jump,  pv?.broad_jump)}
               ${mRow('slbj_L',      d.slbj_L,      pv?.slbj_L)}
               ${mRow('slbj_R',      d.slbj_R,      pv?.slbj_R)}
@@ -451,28 +455,30 @@ function renderMain(){
               ${d.eur!=null ? mRow('eur', d.eur, pv?.eur, '(CMJ÷SJ)', true) : ''}
               ${d.cmj_mrsi!=null
                 ? mRow('cmj_mrsi', d.cmj_mrsi, pv?.cmj_mrsi, `(${d.cmj}cm ÷ ${d.cmj_ct_ms}ms)`, true)
-                : `<tr><td class="lbl">CMJ mRSI <span style="font-size:10px;color:var(--text-muted)">(needs contraction time)</span></td><td colspan="3" class="miss">— add cmj_contraction_time_ms to unlock</td></tr>`}
+                : `<tr><td class="lbl">CMJ mRSI <span style="font-size:10px;color:var(--text-muted)">(needs contraction time)</span></td><td colspan="2" class="miss">— add cmj_contraction_time_ms to unlock</td><td style="font-size:11px;color:var(--text-muted)">${NORMS.cmj_mrsi.min}–${NORMS.cmj_mrsi.max} ${NORMS.cmj_mrsi.u}</td><td class="miss">—</td></tr>`}
               ${mRow('dj',          d.dj,          pv?.dj)}
               ${d.dj_rsi!=null
                 ? mRow('dj_rsi', d.dj_rsi, pv?.dj_rsi, `(${d.dj}cm ÷ ${d.dj_ct_ms}ms)`, true)
-                : `<tr><td class="lbl">DJ RSI <span style="font-size:10px;color:var(--text-muted)">(needs contact time)</span></td><td colspan="3" class="miss">— add dj_contact_time_ms to unlock</td></tr>`}
+                : `<tr><td class="lbl">DJ RSI <span style="font-size:10px;color:var(--text-muted)">(needs contact time)</span></td><td colspan="2" class="miss">— add dj_contact_time_ms to unlock</td><td style="font-size:11px;color:var(--text-muted)">${NORMS.dj_rsi.min}–${NORMS.dj_rsi.max} ${NORMS.dj_rsi.u}</td><td class="miss">—</td></tr>`}
               ${mRow('dsi',         d.dsi,         pv?.dsi, '(force plate)', false)}
             </tbody></table>
           </div>
 
           <div>
             <div class="sec-heading">Aerobic fitness</div>
-            <table><thead><tr><th>Test</th><th>Result</th><th>Test result status</th><th>vs previous</th></tr></thead><tbody>
+            <table><thead><tr><th>Test</th><th>Result</th><th>Test result status</th><th>Normative range</th><th>vs previous</th></tr></thead><tbody>
               <tr>
                 <td class="lbl">MAS (5-min TT)</td>
                 <td><span class="rval">${d.mas??'—'}</span><span class="runit">m/s</span>${d.tt5min_dist?`<span class="rsub">(${d.tt5min_dist}m)</span>`:''}<span class="calc-badge">auto</span></td>
                 <td>${pill(bs(d.mas,'mas'))}</td>
+                <td style="font-size:11px;color:var(--text-muted)">${NORMS.mas.min}–${NORMS.mas.max} ${NORMS.mas.u}</td>
                 <td>${dHtml(d.mas,pv?.mas,false)}</td>
               </tr>
               <tr>
                 <td class="lbl">Est. VO₂ max</td>
                 <td><span class="rval">${d.vo2max??'—'}</span><span class="runit">ml/kg/min</span>${d.mas?'<span class="calc-badge">auto</span>':''}</td>
                 <td>${pill(bs(d.vo2max,'vo2max'))}</td>
+                <td style="font-size:11px;color:var(--text-muted)">${NORMS.vo2max.min}–${NORMS.vo2max.max} ${NORMS.vo2max.u}</td>
                 <td>${dHtml(d.vo2max,pv?.vo2max,false)}</td>
               </tr>
             </tbody></table>
@@ -480,19 +486,19 @@ function renderMain(){
 
           <div>
             <div class="sec-heading">Strength</div>
-            <table><thead><tr><th>Test</th><th>Result</th><th>Test result status</th><th>vs previous</th></tr></thead><tbody>
+            <table><thead><tr><th>Test</th><th>Result</th><th>Test result status</th><th>Normative range</th><th>vs previous</th></tr></thead><tbody>
               ${strengthRow('sq_1rm_bw',d,pv,'Back squat')}
               ${strengthRow('tb_1rm_bw',d,pv,'Trap bar DL')}
               ${strengthRow('bp_1rm_bw',d,pv,'Bench press')}
               ${d.imtp!=null
                 ? mRow('imtp', d.imtp, pv?.imtp, `(${d.imtp_raw_N}N)`, true)
-                : `<tr><td class="lbl">IMTP <span style="font-size:10px;color:var(--text-muted)">(force plate)</span></td><td colspan="3" class="miss">— add imtp_N to unlock</td></tr>`}
+                : `<tr><td class="lbl">IMTP <span style="font-size:10px;color:var(--text-muted)">(force plate)</span></td><td colspan="2" class="miss">— add imtp_N to unlock</td><td style="font-size:11px;color:var(--text-muted)">${NORMS.imtp.min}–${NORMS.imtp.max} ${NORMS.imtp.u}</td><td class="miss">—</td></tr>`}
             </tbody></table>
           </div>
 
           <div>
             <div class="sec-heading">Speed (Vuemotion)</div>
-            <table><thead><tr><th>Test</th><th>Result</th><th>Test result status</th><th>vs previous</th></tr></thead><tbody>
+            <table><thead><tr><th>Test</th><th>Result</th><th>Test result status</th><th>Normative range</th><th>vs previous</th></tr></thead><tbody>
               ${mRow('sprint10', d.sprint10, pv?.sprint10)}
               ${mRow('sprint20', d.sprint20, pv?.sprint20)}
               ${mRow('max_vel',  d.max_vel,  pv?.max_vel)}
@@ -557,7 +563,8 @@ function drawCharts(){
   const ser=(key,col,dash=[])=>({label:NORMS[key]?.label||key,...ls(col,dash),data:sessions.map(s=>s[key])});
 
   const charts=[
-    {id:'ch-jump',   title:'Broad jump / Triple hop', u:'cm',   nk:'broad_jump',  ds:[ser('broad_jump',CC[0]),ser('triple_hop',CC[2],[5,3])]},
+    {id:'ch-broadjump',  title:'Broad jump',  u:'cm', nk:'broad_jump',  ds:[ser('broad_jump',CC[0])]},
+    {id:'ch-triplehop',  title:'Triple hop',  u:'cm', nk:'triple_hop',  ds:[ser('triple_hop',CC[2])]},
     {id:'ch-lsi',    title:'SL Broad jump LSI',       u:'%',    nk:'slbj_LSI',    ds:[ser('slbj_LSI',CC[1])]},
     {id:'ch-cmj',    title:'CMJ / SJ heights',        u:'cm',   nk:'cmj',         ds:[ser('cmj',CC[0]),ser('sj',CC[1],[5,3])]},
     {id:'ch-eur',    title:'EUR (CMJ÷SJ)',             u:'ratio',nk:'eur',         ds:[ser('eur',CC[3])]},
@@ -565,7 +572,8 @@ function drawCharts(){
     {id:'ch-djrsi',  title:'DJ RSI',                  u:'m/s',  nk:'dj_rsi',      ds:[ser('dj_rsi',CC[4])]},
     {id:'ch-mas',    title:'MAS — 5-min TT',          u:'m/s',  nk:'mas',         ds:[ser('mas',CC[3])]},
     {id:'ch-strength',title:'Strength ratios (×BW)',  u:'×BW',  nk:'sq_1rm_bw',   ds:[ser('sq_1rm_bw',CC[4]),ser('tb_1rm_bw',CC[5],[5,3]),ser('bp_1rm_bw',CC[6],[2,2])]},
-    {id:'ch-sprint', title:'Sprint times',            u:'s',    nk:'sprint10',    ds:[ser('sprint10',CC[0]),ser('sprint20',CC[1],[5,3])]},
+    {id:'ch-sprint10', title:'10m sprint', u:'s', nk:'sprint10', ds:[ser('sprint10',CC[0])]},
+    {id:'ch-sprint20', title:'20m sprint', u:'s', nk:'sprint20', ds:[ser('sprint20',CC[1])]},
     {id:'ch-vel',    title:'Max velocity (20m fly)',  u:'m/s',  nk:'max_vel',     ds:[ser('max_vel',CC[4])]},
   ];
 
