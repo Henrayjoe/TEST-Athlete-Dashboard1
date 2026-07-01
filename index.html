@@ -164,7 +164,7 @@ const NORMS = {
   slbj_R:        { min:null, max:null, u:'cm',        lb:false, label:'SL broad jump — R',       cat:'jump', noNorm:true },
   // LSI: healthy footballers show natural variance of 97-106% (scoping review, 27 studies, JOSPT 2024).
   // <90% is a distinct injury-risk threshold (not a benchmark tier) — flagged separately in the UI.
-  slbj_LSI:      { min:97,   max:106,  u:'%',         lb:false, label:'SL broad jump LSI',       cat:'jump', injuryFloor:90 },
+  slbj_LSI:      { min:90,   max:100,  u:'%',         lb:false, label:'SL broad jump LSI',       cat:'jump', injuryFloor:90 },
   // Triple hop (single-leg): collegiate male soccer/basketball average 632±72cm (Myers et al. 2014).
   // No professional-specific dataset found — moderate confidence, not pro-validated.
   triple_hop:    { min:560,  max:704,  u:'cm',        lb:false, label:'Triple hop (SL)',         cat:'jump', note:'Collegiate data, not pro-specific' },
